@@ -14,6 +14,22 @@ I carried out the manual process of measuring, routing, assembling, documenting 
 
 Harness Studio is a prototype for that workflow: select a harness, edit its physical layout and wire records, then generate updated endpoint cards from the same data.
 
+## From the workshop
+
+The photos below show the real hands-on work behind this project. They document the physical assembly process; the downloadable application uses a separate, synthetic demo harness.
+
+### Assembly-board overview
+
+<img src="docs/images/workshop-overview.jpg" alt="Wiring harness laid out on a numbered assembly board with coloured routing guides and printed X-point cards" width="720">
+
+*Wire routing on the assembly board, with numbered hole coordinates, coloured guides and printed endpoint cards.*
+
+### Routing detail
+
+<img src="docs/images/routing-detail.jpg" alt="Close-up of wire bundles and branches routed around black pegs along blue and green guides" width="720">
+
+*Close-up of the manual routing and assembly work: bundles and branches are held in position by movable pegs.*
+
 ## Features
 
 - Editable SVG diagram with draggable points, bends, zoom and search.
