@@ -8,6 +8,22 @@ Built by Mathias Hadi Dyhr as a working prototype informed by hands-on wiring ha
 
 *Diagram generated from the included demo data. This is a layout illustration, not a screenshot of the editor.*
 
+## Application screenshots
+
+These screenshots show the Danish interface using the synthetic Demo Harness.
+
+### Wire list
+
+![Wire list showing endpoints, destination route colours, wire colours, cross-sections, ordered routes and calculated lengths](docs/images/wire-list.png)
+
+*One row per physical wire, including separate rows for identical wires. Each record shows its endpoints, wire colour, cross-section, route and calculated length including the registered allowance.*
+
+### Endpoint control cards
+
+![X1 to X4 control cards showing wire counts, destinations, colours, cross-sections and lengths](docs/images/control-cards.png)
+
+*Printable cards grouped by X-point. The coloured ring indicates the routing colour at the destination. Cards are derived from the current wire records and measurements.*
+
 ## Why I built it
 
 I carried out the manual process of measuring, routing, assembling, documenting and checking wiring harnesses. That experience highlighted an opportunity to keep routing diagrams, measurements and control cards together so they can be corrected and reused.
