@@ -8,7 +8,7 @@ class AppTests(unittest.TestCase):
   with server.connect() as c:self.doc=server.load(c,c.execute('SELECT id FROM harness').fetchone()[0])
  def tearDown(self):self.temp.cleanup()
  def test_seed_and_lengths(self):
-  d=self.doc;self.assertEqual((len(d['points']),len(d['segments']),len(d['wires'])),(5,4,2))
+  d=self.doc;self.assertEqual((len(d['points']),len(d['segments']),len(d['wires'])),(8,7,4))
   self.assertTrue(all(server.wire_result(d,w)['length_cm'] is not None for w in d['wires']))
   self.assertTrue(all(p['color'] in server.COLORS for p in d['points'] if p['id'].startswith('X')))
   values={w['id']:server.wire_result(d,w)['length_cm'] for w in d['wires']}
@@ -37,7 +37,7 @@ class AppTests(unittest.TestCase):
   with self.assertRaises(ValueError):server.save(d,d['id'],1)
   with server.connect() as c:self.assertEqual(server.load(c,d['id'])['version'],1)
  def test_wire_copy_preserved(self):
-  d=self.doc;copy_doc=server.save(d);self.assertNotEqual(d['id'],copy_doc['id']);self.assertEqual(len(copy_doc['wires']),2)
+  d=self.doc;copy_doc=server.save(d);self.assertNotEqual(d['id'],copy_doc['id']);self.assertEqual(len(copy_doc['wires']),4)
  def test_x_point_color_persists(self):
   d=self.doc;point=next(p for p in d['points'] if p['id'].startswith('X'));point['color']='purple';point['label']='D-stolpe højre'
   saved=server.save(d,d['id'],d['version'])
