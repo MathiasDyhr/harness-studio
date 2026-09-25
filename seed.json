@@ -1,165 +1,23 @@
 {
   "name": "Demo Harness",
   "status": "draft",
-  "notes": "Synthetic portfolio example. Not a production wiring specification. All dimensions in cm.",
+  "notes": "Fiktive demonstrationsdata. Punkter, ruter, farver og længder repræsenterer ikke et rigtigt produkt.",
   "points": [
-    {
-      "id": "X1",
-      "x": 20,
-      "y": 270
-    },
-    {
-      "id": "P1",
-      "x": 20,
-      "y": 210
-    },
-    {
-      "id": "P2",
-      "x": 76,
-      "y": 210
-    },
-    {
-      "id": "P3",
-      "x": 76,
-      "y": 130
-    },
-    {
-      "id": "X2",
-      "x": 28,
-      "y": 130
-    },
-    {
-      "id": "X3",
-      "x": 125,
-      "y": 130
-    },
-    {
-      "id": "P4",
-      "x": 76,
-      "y": 55
-    },
-    {
-      "id": "X4",
-      "x": 125,
-      "y": 55
-    }
+    {"id": "X1", "x": 4.25, "y": 4.5, "color": "blue", "label": "Demo start", "span_x": 2, "span_y": 1, "anchor_x": 1, "anchor_y": 1},
+    {"id": "P1", "x": 39.45, "y": 39.7, "color": null, "label": "", "span_x": 1, "span_y": 1, "anchor_x": 1, "anchor_y": 1},
+    {"id": "P2", "x": 74.65, "y": 74.9, "color": null, "label": "", "span_x": 1, "span_y": 1, "anchor_x": 1, "anchor_y": 1},
+    {"id": "X2", "x": 109.85, "y": 110.1, "color": "green", "label": "Demo udgang", "span_x": 1, "span_y": 1, "anchor_x": 1, "anchor_y": 1},
+    {"id": "X3", "x": 39.45, "y": 145.3, "color": "yellow", "label": "Demo gren", "span_x": 1, "span_y": 1, "anchor_x": 1, "anchor_y": 1}
   ],
   "segments": [
-    {
-      "id": "M1",
-      "a": "X1",
-      "b": "P1",
-      "length_cm": 60,
-      "color": "blue",
-      "bends": []
-    },
-    {
-      "id": "M2",
-      "a": "P1",
-      "b": "P2",
-      "length_cm": 56,
-      "color": "blue",
-      "bends": []
-    },
-    {
-      "id": "M3",
-      "a": "P2",
-      "b": "P3",
-      "length_cm": 80,
-      "color": "green",
-      "bends": []
-    },
-    {
-      "id": "M4",
-      "a": "P3",
-      "b": "X2",
-      "length_cm": 48,
-      "color": "yellow",
-      "bends": []
-    },
-    {
-      "id": "M5",
-      "a": "P3",
-      "b": "X3",
-      "length_cm": 49,
-      "color": "brown",
-      "bends": []
-    },
-    {
-      "id": "M6",
-      "a": "P3",
-      "b": "P4",
-      "length_cm": 75,
-      "color": "green",
-      "bends": []
-    },
-    {
-      "id": "M7",
-      "a": "P4",
-      "b": "X4",
-      "length_cm": 49,
-      "color": "purple",
-      "bends": []
-    }
+    {"id": "M1", "a": "X1", "b": "P1", "length_cm": null, "color": "blue", "bends": []},
+    {"id": "M2", "a": "P1", "b": "P2", "length_cm": null, "color": "blue", "bends": []},
+    {"id": "M3", "a": "P2", "b": "X2", "length_cm": null, "color": "green", "bends": []},
+    {"id": "M4", "a": "P1", "b": "X3", "length_cm": null, "color": "yellow", "bends": []}
   ],
   "wires": [
-    {
-      "id": "demo1",
-      "a": "X1",
-      "b": "X2",
-      "color": "R\u00f8d",
-      "gauge": 1.5,
-      "allowance_cm": 0,
-      "route": [
-        "M1",
-        "M2",
-        "M3",
-        "M4"
-      ]
-    },
-    {
-      "id": "demo2",
-      "a": "X1",
-      "b": "X2",
-      "color": "R\u00f8d",
-      "gauge": 1.5,
-      "allowance_cm": 0,
-      "route": [
-        "M1",
-        "M2",
-        "M3",
-        "M4"
-      ]
-    },
-    {
-      "id": "demo3",
-      "a": "X1",
-      "b": "X3",
-      "color": "Brun",
-      "gauge": 1.5,
-      "allowance_cm": 0,
-      "route": [
-        "M1",
-        "M2",
-        "M3",
-        "M5"
-      ]
-    },
-    {
-      "id": "demo4",
-      "a": "X1",
-      "b": "X4",
-      "color": "Hvid/gul",
-      "gauge": 0.75,
-      "allowance_cm": 0,
-      "route": [
-        "M1",
-        "M2",
-        "M3",
-        "M6",
-        "M7"
-      ]
-    }
+    {"id": "demo-wire-1", "a": "X1", "b": "X2", "color": "Blå", "gauge": 0.75, "allowance_cm": 0, "route": ["M1", "M2", "M3"]},
+    {"id": "demo-wire-2", "a": "X1", "b": "X3", "color": "Rød", "gauge": 1.5, "allowance_cm": 0, "route": ["M1", "M4"]}
   ],
   "bundles": []
 }

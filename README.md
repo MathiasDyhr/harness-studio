@@ -1,149 +1,92 @@
-# Harness Studio
+# Harness Studio · lokal demo
 
-A local wiring harness editor that connects an interactive assembly-board diagram with structured wire data and automatically updated control cards.
+## Start på Windows
 
-Built by Mathias Hadi Dyhr as a working prototype informed by hands-on wiring harness production. This portfolio edition contains **synthetic demo data**, not customer harness specifications. The application interface is in Danish; this documentation is in English.
+1. Pak ZIP-filen ud i en almindelig mappe, hvor du må gemme filer.
+2. Python 3.10 eller nyere skal være installeret.
+3. Dobbeltklik på `START_WINDOWS.bat`.
+4. Browseren åbner programmet. Lad terminalvinduet være åbent, mens du arbejder.
 
-![Synthetic demo layout](docs/demo-layout.svg)
-
-*Diagram generated from the included demo data. This is a layout illustration, not a screenshot of the editor.*
-
-## Application screenshots
-
-These screenshots show the Danish interface using the synthetic Demo Harness.
-
-### Wire list
-
-![Wire list showing endpoints, destination route colours, wire colours, cross-sections, ordered routes and calculated lengths](docs/images/wire-list.png)
-
-*One row per physical wire, including separate rows for identical wires. Each record shows its endpoints, wire colour, cross-section, route and calculated length including the registered allowance.*
-
-### Endpoint control cards
-
-![X1 to X4 control cards showing wire counts, destinations, colours, cross-sections and lengths](docs/images/control-cards.png)
-
-*Printable cards grouped by X-point. The coloured ring indicates the routing colour at the destination. Cards are derived from the current wire records and measurements.*
-
-## Why I built it
-
-I carried out the manual process of measuring, routing, assembling, documenting and checking wiring harnesses. That experience highlighted an opportunity to keep routing diagrams, measurements and control cards together so they can be corrected and reused.
-
-Harness Studio is a prototype for that workflow: select a harness, edit its physical layout and wire records, then generate updated endpoint cards from the same data.
-
-## From the workshop
-
-The photos below show the real hands-on work behind this project. They document the physical assembly process; the downloadable application uses a separate, synthetic demo harness.
-
-### Assembly-board overview
-
-<img src="docs/images/workshop-overview.jpg" alt="Wiring harness laid out on a numbered assembly board with coloured routing guides and printed X-point cards" width="720">
-
-*Wire routing on the assembly board, with numbered hole coordinates, coloured guides and printed endpoint cards.*
-
-### Routing detail
-
-<img src="docs/images/routing-detail.jpg" alt="Close-up of wire bundles and branches routed around black pegs along blue and green guides" width="720">
-
-*Close-up of the manual routing and assembly work: bundles and branches are held in position by movable pegs.*
-
-## Features
-
-- Editable SVG diagram with draggable points, bends, zoom and search.
-- Assembly-board hole grid with 32 mm centre spacing and named coordinates.
-- Separate records for physical routing segments and individual electrical wires.
-- Breadth-first route suggestions between wire endpoints.
-- Wire-length calculation from entered segment measurements and a per-wire allowance.
-- Validation of route continuity, endpoint consistency and missing measurements.
-- Automatically updated, printable X-point cards with destination route colours.
-- SQLite storage, saved revision history, JSON import/export and undo for unsaved edits.
-- Version checks to reject stale saves from another browser tab.
-
-## Quick start
-
-Requires Python 3.10 or newer. No third-party Python packages or database server are required.
-
-1. Download or clone this repository.
-2. Open a terminal in the project folder.
-3. Run:
+Alternativt, fra terminalen i denne mappe:
 
 ```sh
 python server.py
 ```
 
-On Windows, you can also double-click `START_WINDOWS.bat`.
+Åbn http://127.0.0.1:8765 hvis browseren ikke åbner selv. Ved optaget port: `python server.py --port 8766`.
+Der skal ikke installeres Python-pakker eller en separat databaseserver. Programmet kræver ingen internetforbindelse.
 
-The application opens at http://127.0.0.1:8765. Keep the terminal open while working. If the port is occupied, use `python server.py --port 8766`.
+## Arbejdsgang
 
-On first launch, a new database is created at `data/harness.sqlite` using `seed.json`. Changing the seed does not overwrite an existing database.
+- Vælg det medfølgende **Demo Harness**, eller vælg **Nyt** for et tomt net.
+- Klik på en M-strækning og ret endepunkter eller føringsfarve i højre side. Længden beregnes fra tegningen.
+- Fjern markeringen i **Vis M-linjer** for at skjule alle M-strækninger og M-numre. Valget huskes på computeren.
+- Fjern kun markeringen i **Vis M-numre** for at beholde de farvede linjer, men skjule teksten M1, M2 osv.
+- Brug musehjulet til at scrolle, `Shift + musehjul` til vandret scroll og `Ctrl + musehjul` til at zoome omkring markøren. Du kan også panorere ved at trække i et tomt område af diagrammet.
+- Brug **Vend 180°** for at se og redigere diagrammet fra den modsatte ende. Retningen huskes på computeren og ændrer ikke de gemte mål eller hulplaceringer.
+- Knappen **Slet** ved valg af ledningsnet sletter det valgte net efter en tydelig bekræftelse.
+- Under **X-punkter** kan hvert X-nummer få et navn eller en beskrivelse og en farve.
+- Under **Net & versioner** kan enkelte historiske versioner åbnes som kopi eller slettes.
+- Klik på et punkt og skriv hulplaceringen direkte, f.eks. `C29 · 2`, indtast koordinater eller træk punktet på bordet. **Lås til huller** gælder træk og nye punkter. **Til nærmeste hul** flytter det valgte punkt til nærmeste hul. Koordinatfelter tillader placering mellem huller.
+- Et X-punkt kan fylde flere huller. Angiv bredde og højde i huller ved punktet; hulplaceringen er feltets øverste venstre hul.
+- Ved et X-punkt over flere huller kan **Linje fra kolonne/række** flytte linjens tilslutning til et bestemt hul i X-punktet. Den lille farvede prik viser det valgte tilslutningshul.
+- Aktivér **Forbind to punkter**, og træk fra et X- eller P-punkt til et andet punkt. Slipper du på et tomt hul, oprettes et nyt P-punkt og en M-forbindelse automatisk. Det gør det også muligt at forbinde P-punkter ved siden af hinanden.
+- Et almindeligt P-punkt kan trækkes direkte fra værktøjsrailen og slippes på diagrammet. Aktivér **Forbind**, og klik derefter på første og andet punkt for at oprette en M-linje uden at trække.
+- Diagramværktøjerne sidder i en fast værktøjsrail direkte ved siden af diagrammets scrollområde. Ændringer i det valgte punkts og den valgte M-linjes felter anvendes automatisk, når du forlader feltet eller vælger en ny værdi; der skal ikke trykkes **Anvend**.
+- Flyttes et punkt ind på en eksisterende M-linje, deles linjen automatisk ved punktet. Den samlede tegnede længde følger geometrien.
+- Tilføj X-punkter til ledningernes ender og P-punkter til fysisk føring. Punkter er ikke elektriske samlinger.
+- En M-strækning er lige, medmindre du angiver knæk som `x,y`, ét pr. linje og med decimalpunkt.
+- Under **Ledninger** kan du ændre farve, kvadrat, endepunkter, tillæg og ordnet M-rute. **Foreslå rute** finder en sammenhængende vej for den enkelte ledning. Kontrollér den fysisk.
+- Under **Ruller** vælger du, hvor mange ens ledningsnet der skal produceres. Beregneren lægger 15 cm til hvert fysisk ledningsstykke, grupperer efter ledningsfarve og mm² og pakker kun hele stykker på hver rulle. En rest bruges kun, hvis hele det næste stykke kan være der. Standardruller er 100 m for 0,75, 1,5 og 2,5 mm² samt 25 m for 16 mm²; længderne kan rettes i visningen.
+- Manglende eller brudte ledningsruter findes automatisk, når nettet åbnes eller forbindelser ændres. **Nulstil og beregn alle ruter** sletter først samtlige gamle rutevalg, registrerer punkter på eksisterende M-linjer og beregner derefter alle ruter helt fra bunden via den korteste tegnede vej. Handlingen kan fortrydes.
+- **X-kort** afspejler rettelser med det samme. Print alle eller vælg ét X-punkt. Browserens udskrivning kan gemme PDF. Slå browserens egne sidehoveder/fødder fra for rene kort.
+- Tryk **Gem ændringer** før du lukker. Ugemte ændringer mistes ved nedbrud. Hver gemning opretter en historisk version.
+- Under **Net & versioner** kan du ændre navn og noter, markere nettet gennemgået ved bordet eller åbne en gammel version som et nyt net.
+- **Fortryd** gælder ændringer siden seneste gemning. Historikken gælder gemte versioner.
+- Det valgte punkt eller den valgte M-strækning kan slettes med **Delete** på tastaturet. Når en strækning slettes, fjernes den automatisk fra de ledningsruter, der bruger den; de berørte ruter skal derefter kontrolleres eller tegnes igen.
 
-## Try the demo
+## Hvad der er med
 
-1. Open **Demo Harness** and choose **Kopiér** to make your own working copy.
-2. Search for **M1**. Its measured length is 60 cm.
-3. Change it to 65 cm and click **Anvend**. Each demo wire uses M1, so each calculated length increases by 5 cm.
-4. Open **X-kort** to see the updated control cards.
-5. Return to **Diagram**, select a point and drag it. Its position changes, but the entered measured lengths remain unchanged.
-6. Choose **Gem ændringer** to persist your edits.
+Den medfølgende seed-fil indeholder kun få, syntetiske demonstrationspunkter og ledninger. Den repræsenterer ikke et rigtigt produkt eller produktionsnet.
 
-| Danish control | Meaning |
-| --- | --- |
-| Nyt / Kopiér | New harness / copy harness |
-| Søg | Find a point or segment |
-| Lås til huller / Til hul | Snap dragged points / snap selected point |
-| Anvend | Apply an edit in the current session |
-| Gem ændringer | Save to the database |
-| Ledninger | Individual wire records |
-| Foreslå rute | Suggest a connected route |
-| X-kort | Endpoint control cards |
-| Net & versioner | Harness settings and saved history |
-| Print / gem PDF | Print cards or save them as PDF |
+Bordet vises i kompakte diagramkoordinater, men alle tegnede længder beregnes med **3,5 cm fra hulmidte til hulmidte**. Der er 46 kolonner og 91 rækker fordelt A1–A30, B1–B31 og C1–C30.
 
-## How it works
+Demoens kolonner vises med **46 til venstre og 1 til højre**. En indtastet huladresse bruger samme retning.
 
-The browser holds the current editable document. Python validates saved documents and writes the harness and revision snapshot in a SQLite transaction. Control cards are derived from the current wire records and segment measurements.
+Farvede ringe angiver destinations-X-punktets farve, ikke lederens isolationsfarve. Farven kan ændres ved at vælge X-punktet på bordet. En rute med forkerte forbindelser får ingen beregnet længde.
 
-The database uses six tables: `harness`, `point`, `segment`, `wire`, `route_step` and `revision`. Route steps are ordered; duplicate physical wires are retained as separate records.
+## Tegnede længder
 
-A route suggestion uses breadth-first search and minimises the number of segments, **not total distance**. It is a suggestion to check against the physical board. Editing a connection does not automatically reroute existing wires.
+- Skitsen importeres som **Kladde**. Knapplaceringer og foreslåede ruter er ikke bekræftet ved bordet.
+- Tidligere indtastede og fælles mål er fjernet. Diagrammets geometri er den eneste længdekilde.
+- Flytning af punkter ændrer geometrien, men aldrig indtastede mål.
+- Der er **ikke** lagt 20 cm tillæg til. Et eksplicit tillægsfelt på hver ledning lægges én gang til hele dens beregnede længde. Tillæg for hele produktionen er ikke implementeret.
+- Ændring af en M-forbindelse kan gøre eksisterende ruter ugyldige. De skal rettes i ledningslisten. En kladde må gemmes med manglende mål/ruter, men kan ikke markeres gennemgået, før længderne kan beregnes.
+- Ingen automatisk elektrisk kontrol, strømberegning eller påstand om at et gennemgået net er certificeret.
 
-Measured length and drawn geometry are deliberately separate. Moving a point cannot silently overwrite a tape-measured value. A routing point also does not imply an electrical splice.
+## Gemning og backup
 
-Combined measurements are supported when two or more segments have only a shared known length. A route using only part of that group remains unresolved until the required individual measurements are provided.
+Databasen oprettes automatisk som `data/harness.sqlite`. Den indeholder nettet, punkter, strækninger, ledninger, ruter og versionshistorik. Bevar den fil, når du opdaterer programmet.
 
-## Tests
+**Eksportér JSON** gemmer det åbne net inklusive aktuelle rettelser. **Importér som nyt net** opretter en ny kladde. JSON indeholder ikke hele versionshistorikken. For fuld backup: luk programmet og kopiér `data/harness.sqlite` til et andet sted.
+
+To åbne faner kan ikke stiltiende overskrive hinandens gemninger: serveren afviser en forældet version. Eksportér JSON før genindlæsning, hvis du får den besked.
+
+## Teknisk grundlag
+
+Denne første udgave er lokal og bruger Python-standardbibliotekets HTTP-server og SQLite, med en SVG/JavaScript-editor i browseren. Den er ikke en PostgreSQL/FastAPI/React-implementering. Målet er at afprøve den konkrete arbejdsgang før flere dependencies og serverdrift introduceres.
+
+- `server.py`: API, validering, længdeberegning, SQL-transaktioner og versionskontrol.
+- `static/`: brugerfladen.
+- `seed.json`: den importerede skitse. Bruges kun ved oprettelse af en tom database.
+- `test_app.py`: regressionstest af gemning, mål og dataintegritet.
+
+SQL-tabeller: `harness`, `point`, `segment`, `wire`, `route_step` og `revision`. Fremmednøgler er aktiveret. Gemning af et net og dets historik sker atomisk. Længder og koordinater er i cm i denne første udgave.
+
+Programmet lytter kun på denne computer (127.0.0.1). Det er ikke en internetserver eller en flerbrugerløsning med login. PostgreSQL, FastAPI, adgangskontrol og fælles drift kan tilføjes senere; det er ikke nødvendigt for at prøve denne udgave ved bordet.
+
+Kør test:
 
 ```sh
 python -m unittest discover -v
 ```
-
-Tests cover measured lengths, allowances, persistence, revision history, stale saves, atomic validation failures, route errors, combined measurements and duplicate wires. They do not constitute browser interaction tests.
-
-## Project files
-
-| File | Purpose |
-| --- | --- |
-| `server.py` | Local HTTP API, validation, length calculation and SQLite persistence |
-| `static/` | JavaScript, HTML and CSS interface |
-| `seed.json` | Synthetic starter harness |
-| `test_app.py` | Automated regression tests |
-| `docs/demo-layout.svg` | Illustration of the synthetic layout |
-
-## Current scope
-
-This is a local prototype, not a deployed production platform. It binds to localhost and has no user accounts. The fixed board is 152.5 × 297 cm across three plates. Physical hole positions and routing must be checked before workshop use. The original production workflow includes manual connection checks; the application does not perform electrical certification or current-capacity calculations.
-
-The UI calculates results in JavaScript for immediate feedback; Python separately validates them on save. Keeping those implementations aligned is an ongoing maintenance consideration.
-
-## Backup
-
-Use **Eksportér JSON** to transfer the current harness. For all harnesses and revision history, close the program and back up `data/harness.sqlite`. Local databases are excluded from Git.
-
-## Possible next steps
-
-- Browser-level interaction tests and improved keyboard accessibility.
-- Configurable board dimensions and calibrated peg positions.
-- An English interface and a clearer first-use workflow.
-- Comparison of measured geometry with entered lengths.
-- Optional OCR-assisted data entry with human confirmation.
-
-These are future ideas, not implemented features. The current route suggestions and calculations are deterministic algorithms, not machine learning.

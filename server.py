@@ -1,7 +1,8 @@
-"""Harness Studio portfolio demo. Python 3.10+, no external dependencies."""
+"""Harness Studio demo. Python 3.10+, no external dependencies."""
 import argparse, json, math, os, re, sqlite3, uuid, webbrowser
 from datetime import datetime, timezone
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+import socket
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -11,15 +12,23 @@ COLORS = {'blue','green','yellow','brown','purple','orange'}
 SCHEMA = '''
 PRAGMA foreign_keys=ON;
 CREATE TABLE IF NOT EXISTS harness(id TEXT PRIMARY KEY, name TEXT NOT NULL, status TEXT NOT NULL, version INTEGER NOT NULL, notes TEXT NOT NULL, bundles TEXT NOT NULL, updated TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS point(harness_id TEXT NOT NULL REFERENCES harness(id), id TEXT NOT NULL, x REAL NOT NULL, y REAL NOT NULL, PRIMARY KEY(harness_id,id));
+CREATE TABLE IF NOT EXISTS point(harness_id TEXT NOT NULL REFERENCES harness(id), id TEXT NOT NULL, x REAL NOT NULL, y REAL NOT NULL, color TEXT, label TEXT NOT NULL DEFAULT '', span_x INTEGER NOT NULL DEFAULT 1, span_y INTEGER NOT NULL DEFAULT 1, anchor_x INTEGER NOT NULL DEFAULT 1, anchor_y INTEGER NOT NULL DEFAULT 1, PRIMARY KEY(harness_id,id));
 CREATE TABLE IF NOT EXISTS segment(harness_id TEXT NOT NULL, id TEXT NOT NULL, a TEXT NOT NULL,b TEXT NOT NULL,length_cm REAL,color TEXT NOT NULL,bends TEXT NOT NULL,PRIMARY KEY(harness_id,id),FOREIGN KEY(harness_id,a) REFERENCES point(harness_id,id),FOREIGN KEY(harness_id,b) REFERENCES point(harness_id,id));
 CREATE TABLE IF NOT EXISTS wire(harness_id TEXT NOT NULL,id TEXT NOT NULL,a TEXT NOT NULL,b TEXT NOT NULL,color TEXT NOT NULL,gauge REAL NOT NULL,allowance_cm REAL NOT NULL,PRIMARY KEY(harness_id,id),FOREIGN KEY(harness_id,a) REFERENCES point(harness_id,id),FOREIGN KEY(harness_id,b) REFERENCES point(harness_id,id));
 CREATE TABLE IF NOT EXISTS route_step(harness_id TEXT NOT NULL,wire_id TEXT NOT NULL,position INTEGER NOT NULL,segment_id TEXT NOT NULL,PRIMARY KEY(harness_id,wire_id,position),FOREIGN KEY(harness_id,wire_id) REFERENCES wire(harness_id,id),FOREIGN KEY(harness_id,segment_id) REFERENCES segment(harness_id,id));
 CREATE TABLE IF NOT EXISTS revision(harness_id TEXT NOT NULL REFERENCES harness(id),version INTEGER NOT NULL,saved TEXT NOT NULL,document TEXT NOT NULL,PRIMARY KEY(harness_id,version));
 '''
 
+class ClosingConnection(sqlite3.Connection):
+    """Commit/rollback and always release the SQLite file after a with block."""
+    def __exit__(self, exc_type, exc, traceback):
+        try:
+            return super().__exit__(exc_type, exc, traceback)
+        finally:
+            self.close()
+
 def connect():
-    c = sqlite3.connect(DB, timeout=10)
+    c = sqlite3.connect(DB, timeout=10, factory=ClosingConnection)
     c.row_factory = sqlite3.Row
     c.execute('PRAGMA foreign_keys=ON')
     return c
@@ -37,6 +46,12 @@ def validate(d):
     for p in d['points']:
         if not isinstance(p,dict) or not isinstance(p.get('id'),str) or not re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,19}',p['id']) or p['id'] in points: fail('Punktnavne skal være unikke bogstaver/tal.')
         if not number(p.get('x'),0,152.5) or not number(p.get('y'),0,297): fail('Punktet skal ligge på bordet.')
+        if p['id'].startswith('X') and p.get('color') not in COLORS: fail('X-punktet skal have en gyldig farve.')
+        if not p['id'].startswith('X') and p.get('color') is not None: fail('Kun X-punkter kan have en farve.')
+        if not isinstance(p.get('label'),str) or len(p['label'])>100: fail('X-punktets navn må højst være 100 tegn.')
+        if type(p.get('span_x')) is not int or not 1 <= p['span_x'] <= 46 or type(p.get('span_y')) is not int or not 1 <= p['span_y'] <= 91: fail('X-punktets størrelse i huller er ugyldig.')
+        if type(p.get('anchor_x')) is not int or not 1 <= p['anchor_x'] <= p['span_x'] or type(p.get('anchor_y')) is not int or not 1 <= p['anchor_y'] <= p['span_y']: fail('Linjens tilslutningshul skal ligge inden for X-punktet.')
+        if not p['id'].startswith('X') and (p['span_x'] != 1 or p['span_y'] != 1): fail('Kun X-punkter kan fylde flere huller.')
         points[p['id']]=p
     for s in d['segments']:
         if not isinstance(s,dict) or not isinstance(s.get('id'),str) or not re.fullmatch(r'M[1-9][0-9]{0,4}',s['id']) or s['id'] in segments: fail('Ugyldigt eller gentaget M-nummer.')
@@ -64,32 +79,28 @@ def validate(d):
         if any(wire_result(d,w)['length_cm'] is None for w in d['wires']): fail('Ret ledninger med manglende rute eller mål før nettet markeres gennemgået.')
 
 def wire_result(d,w):
-    segments={s['id']:s for s in d['segments']}; cur=w['a']; keys=w['route']
+    segments={s['id']:s for s in d['segments']}; points={p['id']:p for p in d['points']}; cur=w['a']; keys=w['route']
     if not keys: return {'length_cm':None,'issue':'Rute mangler'}
     for key in keys:
         s=segments.get(key)
         if not s or cur not in (s['a'],s['b']): return {'length_cm':None,'issue':'Ruten hænger ikke sammen'}
         cur=s['b'] if s['a']==cur else s['a']
     if cur!=w['b']: return {'length_cm':None,'issue':'Ruten ender ved et andet X-punkt'}
-    total=0; used=set()
-    for b in d['bundles']:
-        overlap=set(b['ids']) & set(keys)
-        # Separate confirmed values take precedence after both have been entered.
-        if overlap and any(segments[k]['length_cm'] is None for k in b['ids']):
-            if overlap != set(b['ids']): return {'length_cm':None,'issue':'Kun en del af et fælles mål bruges'}
-            total+=b['length_cm'];used.update(b['ids'])
+    total=0
     for key in keys:
-        if key in used: continue
-        val=segments[key]['length_cm']
-        if val is None: return {'length_cm':None,'issue':'Mål mangler: '+key}
-        total+=val
+        s=segments[key]
+        def endpoint(pid):
+            p=points[pid]
+            return (p['x']+(p.get('anchor_x',1)-1)*3.2,p['y']+(p.get('anchor_y',1)-1)*3.2)
+        path=[endpoint(s['a']),*[tuple(xy) for xy in s['bends']],endpoint(s['b'])]
+        total+=sum(math.hypot(b[0]-a[0],b[1]-a[1]) for a,b in zip(path,path[1:]))*(3.5/3.2)
     return {'length_cm':round(total+w['allowance_cm'],3),'issue':None}
 
 def load(c,hid):
     row=c.execute('SELECT * FROM harness WHERE id=?',(hid,)).fetchone()
     if row is None: raise KeyError('Nettet findes ikke.')
     d=dict(row);d['bundles']=json.loads(d['bundles'])
-    d['points']=[{k:r[k] for k in ('id','x','y')} for r in c.execute('SELECT * FROM point WHERE harness_id=? ORDER BY rowid',(hid,))]
+    d['points']=[{k:r[k] for k in ('id','x','y','color','label','span_x','span_y','anchor_x','anchor_y')} for r in c.execute('SELECT * FROM point WHERE harness_id=? ORDER BY rowid',(hid,))]
     d['segments']=[]
     for r in c.execute('SELECT * FROM segment WHERE harness_id=? ORDER BY rowid',(hid,)):
         s={k:r[k] for k in ('id','a','b','length_cm','color')};s['bends']=json.loads(r['bends']);d['segments'].append(s)
@@ -101,7 +112,30 @@ def load(c,hid):
 
 class Conflict(Exception): pass
 
+class LocalServer(ThreadingHTTPServer):
+    # Windows otherwise permits several stale copies to share the same port,
+    # causing browser requests to jump between different server versions.
+    allow_reuse_address = False
+    def server_bind(self):
+        if os.name == 'nt' and hasattr(socket, 'SO_EXCLUSIVEADDRUSE'):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
+
 def save(d,hid=None,expected=None):
+    # Backwards compatibility for older seed files, imports, and databases.
+    # Physical measurements are retired; all lengths come from drawn geometry.
+    d['bundles']=[]
+    for s in d.get('segments', []): s['length_cm']=None
+    for p in d.get('points', []):
+        if p.get('id', '').startswith('X') and p.get('color') not in COLORS:
+            p['color']=next((s.get('color') for s in d.get('segments', []) if p['id'] in (s.get('a'),s.get('b')) and s.get('color') in COLORS), 'blue')
+        elif not p.get('id', '').startswith('X'):
+            p['color']=None
+        if not isinstance(p.get('label'),str): p['label']=''
+        p['span_x']=p.get('span_x',1) if p.get('id','').startswith('X') else 1
+        p['span_y']=p.get('span_y',1) if p.get('id','').startswith('X') else 1
+        p['anchor_x']=p.get('anchor_x',1) if p.get('id','').startswith('X') else 1
+        p['anchor_y']=p.get('anchor_y',1) if p.get('id','').startswith('X') else 1
     validate(d);now=datetime.now(timezone.utc).isoformat()
     with connect() as c:
         c.execute('BEGIN IMMEDIATE')
@@ -115,7 +149,7 @@ def save(d,hid=None,expected=None):
         else:
             hid=uuid.uuid4().hex;version=1
             c.execute('INSERT INTO harness VALUES(?,?,?,?,?,?,?)',(hid,d['name'].strip(),d['status'],version,d['notes'],json.dumps(d['bundles']),now))
-        c.executemany('INSERT INTO point VALUES(?,?,?,?)',[(hid,p['id'],p['x'],p['y']) for p in d['points']])
+        c.executemany('INSERT INTO point VALUES(?,?,?,?,?,?,?,?,?,?)',[(hid,p['id'],p['x'],p['y'],p.get('color'),p.get('label',''),p['span_x'],p['span_y'],p['anchor_x'],p['anchor_y']) for p in d['points']])
         c.executemany('INSERT INTO segment VALUES(?,?,?,?,?,?,?)',[(hid,s['id'],s['a'],s['b'],s['length_cm'],s['color'],json.dumps(s['bends'])) for s in d['segments']])
         c.executemany('INSERT INTO wire VALUES(?,?,?,?,?,?,?)',[(hid,w['id'],w['a'],w['b'],w['color'],w['gauge'],w['allowance_cm']) for w in d['wires']])
         c.executemany('INSERT INTO route_step VALUES(?,?,?,?)',[(hid,w['id'],i,key) for w in d['wires'] for i,key in enumerate(w['route'])])
@@ -125,7 +159,21 @@ def save(d,hid=None,expected=None):
 
 def init():
     DB.parent.mkdir(parents=True,exist_ok=True)
-    with connect() as c: c.executescript(SCHEMA)
+    with connect() as c:
+        c.executescript(SCHEMA)
+        if 'color' not in {r['name'] for r in c.execute('PRAGMA table_info(point)')}:
+            c.execute('ALTER TABLE point ADD COLUMN color TEXT')
+        if 'label' not in {r['name'] for r in c.execute('PRAGMA table_info(point)')}:
+            c.execute("ALTER TABLE point ADD COLUMN label TEXT NOT NULL DEFAULT ''")
+        columns={r['name'] for r in c.execute('PRAGMA table_info(point)')}
+        if 'span_x' not in columns: c.execute('ALTER TABLE point ADD COLUMN span_x INTEGER NOT NULL DEFAULT 1')
+        if 'span_y' not in columns: c.execute('ALTER TABLE point ADD COLUMN span_y INTEGER NOT NULL DEFAULT 1')
+        if 'anchor_x' not in columns: c.execute('ALTER TABLE point ADD COLUMN anchor_x INTEGER NOT NULL DEFAULT 1')
+        if 'anchor_y' not in columns: c.execute('ALTER TABLE point ADD COLUMN anchor_y INTEGER NOT NULL DEFAULT 1')
+        c.execute("""UPDATE point SET color=COALESCE(
+            (SELECT segment.color FROM segment WHERE segment.harness_id=point.harness_id
+             AND (segment.a=point.id OR segment.b=point.id) ORDER BY segment.rowid LIMIT 1), 'blue')
+            WHERE id LIKE 'X%' AND color IS NULL""")
     with connect() as c: empty=c.execute('SELECT COUNT(*) FROM harness').fetchone()[0]==0
     if empty: save(json.loads((ROOT/'seed.json').read_text(encoding='utf-8')))
 
@@ -150,9 +198,11 @@ class Handler(BaseHTTPRequestHandler):
                 with connect() as c: r=c.execute('SELECT document FROM revision WHERE harness_id=? AND version=?',(m[1],int(m[2]))).fetchone()
                 if not r: raise KeyError('Versionen findes ikke.')
                 return self.reply(json.loads(r[0]))
-            files={'/':('index.html','text/html'),'/app.js':('app.js','text/javascript'),'/style.css':('style.css','text/css')}
+            files={'/':('index.html','text/html'),'/app.js':('app.js','text/javascript'),'/style.css':('style.css','text/css'),'/xcard.css':('xcard.css','text/css')}
             if path not in files: return self.reply({'error':'Ikke fundet'},404)
-            fn,mime=files[path];body=(ROOT/'static'/fn).read_bytes();self.send_response(200);self.send_header('Content-Type',mime+'; charset=utf-8');self.send_header('Content-Length',str(len(body)));self.send_header('X-Content-Type-Options','nosniff');self.end_headers();self.wfile.write(body)
+            fn,mime=files[path];body=(ROOT/'static'/fn).read_bytes()
+            if fn=='style.css': body+=(ROOT/'static'/'xcard.css').read_bytes()
+            self.send_response(200);self.send_header('Content-Type',mime+'; charset=utf-8');self.send_header('Content-Length',str(len(body)));self.send_header('Cache-Control','no-store');self.send_header('X-Content-Type-Options','nosniff');self.end_headers();self.wfile.write(body)
         except KeyError as e: self.reply({'error':str(e)},404)
     def mutate(self):
         try:
@@ -172,14 +222,42 @@ class Handler(BaseHTTPRequestHandler):
         except Conflict as e: self.reply({'error':str(e)},409)
         except KeyError as e: self.reply({'error':str(e)},404)
         except (ValueError,TypeError,AttributeError,sqlite3.IntegrityError) as e: self.reply({'error':str(e)},400)
+        except sqlite3.OperationalError as e: self.reply({'error':'Databasen kunne ikke gemmes: '+str(e)},503)
     do_POST=mutate
     do_PUT=mutate
+    def do_DELETE(self):
+        try:
+            host=self.headers.get('Host','')
+            if host not in (f'127.0.0.1:{self.server.server_port}',f'localhost:{self.server.server_port}'): return self.reply({'error':'Ugyldig vært'},403)
+            origin=self.headers.get('Origin')
+            if origin and origin not in (f'http://127.0.0.1:{self.server.server_port}',f'http://localhost:{self.server.server_port}'): return self.reply({'error':'Ugyldig oprindelse'},403)
+            path=urlparse(self.path).path
+            history_match=re.fullmatch(r'/api/harnesses/([a-f0-9]+)/history/(\d+)',path)
+            if history_match:
+                with connect() as c:
+                    deleted=c.execute('DELETE FROM revision WHERE harness_id=? AND version=?',(history_match[1],int(history_match[2]))).rowcount
+                    if not deleted: raise KeyError('Versionen findes ikke.')
+                return self.reply({'deleted_version':int(history_match[2])})
+            m=re.fullmatch(r'/api/harnesses/([a-f0-9]+)',path)
+            if not m: return self.reply({'error':'Ikke fundet'},404)
+            with connect() as c:
+                if not c.execute('SELECT 1 FROM harness WHERE id=?',(m[1],)).fetchone(): raise KeyError('Nettet findes ikke.')
+                for table in ('route_step','wire','segment','point','revision','harness'):
+                    c.execute(f'DELETE FROM {table} WHERE harness_id=?' if table!='harness' else 'DELETE FROM harness WHERE id=?',(m[1],))
+            return self.reply({'deleted':m[1]})
+        except KeyError as e: self.reply({'error':str(e)},404)
+        except sqlite3.Error as e: self.reply({'error':'Nettet kunne ikke slettes: '+str(e)},503)
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser();parser.add_argument('--port',type=int,default=8765);parser.add_argument('--no-browser',action='store_true');parser.add_argument('--db',type=Path);args=parser.parse_args()
     if args.db: DB=args.db.resolve()
-    init();server=ThreadingHTTPServer(('127.0.0.1',args.port),Handler)
-    url=f'http://127.0.0.1:{server.server_port}';print('Lindeberg ledningsnet: '+url,flush=True)
+    init()
+    try: server=LocalServer(('127.0.0.1',args.port),Handler)
+    except OSError:
+        print(f'Ledningsnet kører allerede på http://127.0.0.1:{args.port}',flush=True)
+        print('Brug det eksisterende browservindue, eller luk den gamle server først.',flush=True)
+        raise SystemExit(1)
+    url=f'http://127.0.0.1:{server.server_port}';print('Harness Studio: '+url,flush=True)
     if not args.no_browser: webbrowser.open(url)
     try: server.serve_forever()
     except KeyboardInterrupt: pass

@@ -1,10 +1,17 @@
+# Local application data and backups
 data/
+*.sqlite
+*.sqlite3
+*.db
+
+# Python caches and environments
 __pycache__/
 *.py[cod]
 .venv/
-.env
-.env.*
-*.sqlite
-*.sqlite-*
-*.db
+venv/
+
+# Editor and operating-system files
+.vscode/
+.idea/
 .DS_Store
+Thumbs.db
