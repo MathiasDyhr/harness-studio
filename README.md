@@ -1,8 +1,18 @@
-# Harness Studio
+# Harness Studio: Wiring Harness Design and Assembly Documentation
 
-A local wiring harness editor that connects an interactive assembly-board diagram with structured wire data and automatically updated control cards.
+**A Python and SQLite application for planning wire routes, calculating wire lengths and generating printable assembly cards.**
 
-Built by Mathias Hadi Dyhr as a working prototype informed by hands-on wiring harness production. This portfolio edition contains **synthetic demo data**, not customer harness specifications. The application interface is in Danish; this documentation is in English.
+## About the project
+
+A wiring harness is a group of electrical wires routed together to connect components in a vehicle or machine. Building one requires clear records of where each wire starts and ends, its length and how it should be positioned on the assembly board.
+
+Harness Studio brings that information into one editable application. Users can adjust the routing diagram, record measurements and wire specifications, and produce endpoint control cards from the same data. The goal is to make harness documentation easier to correct and reuse for the next build.
+
+I developed this prototype after carrying out the manual harness-building process myself at Lindeberg Tech, including measuring, routing, assembly and connection checks. Working at the board helped me identify what the software needed to show and how someone in the workshop would use it.
+
+**Technical focus:** Python · SQLite · JavaScript · SVG · Data modelling · Graph traversal · Workflow automation
+
+**Project status:** Working local prototype. The included dataset is synthetic so visitors can explore the software without using a customer harness specification. The application and existing screenshots use Danish; this project documentation is in English.
 
 ![Synthetic demo layout](docs/demo-layout.svg)
 
